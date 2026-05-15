@@ -13,6 +13,7 @@
     "test:stripe": "playwright test --project=stripe",
     "import:postman": "tsx scripts/import-postman-demo.ts",
     "verify:open-meteo-post": "tsx scripts/verify-open-meteo-post.ts",
+    "notify:test": "tsx scripts/send-test-notification.ts",
     "report:allure": "allure generate ./allure-results --clean -o ./allure-report",
     "report:allure:view": "serve -l 9292 ./allure-report",
     "report:allure:serve": "allure serve ./allure-results",

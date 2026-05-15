@@ -33,6 +33,14 @@ That watches `./allure-results`, builds the report, and serves it (CLI prints th
 
 When `NOTIFY_ENABLED=true` and SMTP env vars are set, teardown sends a short pass/fail email via Nodemailer. Keep this **off** on pull-request workflows to avoid noise; [`nightly.yml`](../.github/workflows/nightly.yml) is the natural place to enable it.
 
+**Preview one mail locally** (prints subject/body; sends only if SMTP + `NOTIFY_ENABLED=true` or `--send`):
+
+```bash
+npm run notify:test -- --failure --to your.name@company.com
+```
+
+See [`scripts/send-test-notification.ts`](../scripts/send-test-notification.ts) for PowerShell examples.
+
 ## CI/CD and report publishing flow
 
 ```mermaid

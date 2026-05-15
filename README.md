@@ -44,6 +44,10 @@ npm run test:smoke
 2. Set `STRIPE_SECRET_KEY`, run `npx playwright test --project=stripe` — same HTML + Allure + JSON summary, different auth and idempotency.  
 3. Open CI job summary (GitHub Actions) and downloaded **Playwright report** + **Allure results** artifact.
 
+### View Allure locally
+
+Do **not** double‑click `allure-report/index.html` (`file://` breaks data loading → “500 Failed to fetch”). After `npm run report:allure`, run **`npm run report:allure:view`** and open **http://localhost:9292** — or use **`npm run report:allure:serve`** to serve straight from `allure-results`.
+
 ## Repo layout
 
 - `src/core/` — config loader, HTTP client, auth, contracts (OpenAPI + Postman import + Ajv), assertions, reporters, email.  
@@ -74,6 +78,7 @@ See [docs/assumptions-and-risks.md](docs/assumptions-and-risks.md).
 | [CI/CD](docs/ci-cd.md) | GitHub Actions |
 | [Test data](docs/test-data-strategy.md) | Factories and environments |
 | [Roadmap](docs/future-roadmap.md) | Non-goals and next steps |
+| [Copilot bootstrap prompt](docs/github-copilot-bootstrap-prompt.md) | Full recreate-from-scratch spec + fixes checklist |
 
 ## License
 

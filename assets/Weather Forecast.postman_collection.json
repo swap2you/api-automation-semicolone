@@ -1,0 +1,54 @@
+{
+  "info": {
+    "name": "Weather Forecast",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Open-Meteo",
+      "item": [
+        {
+          "name": "Forecast GET",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{open_meteo_base}}/v1/forecast?latitude=37.7749&longitude=-122.4194&hourly=temperature_2m,precipitation_probability&timezone=America/Los_Angeles",
+              "host": ["{{open_meteo_base}}"],
+              "path": ["v1", "forecast"],
+              "query": [
+                { "key": "latitude", "value": "37.7749" },
+                { "key": "longitude", "value": "-122.4194" },
+                { "key": "hourly", "value": "temperature_2m,precipitation_probability" },
+                { "key": "timezone", "value": "America/Los_Angeles" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Forecast POST (verify live before relying on)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{open_meteo_base}}/v1/forecast?latitude=37.7749&longitude=-122.4194&hourly=temperature_2m",
+              "host": ["{{open_meteo_base}}"],
+              "path": ["v1", "forecast"],
+              "query": [
+                { "key": "latitude", "value": "37.7749" },
+                { "key": "longitude", "value": "-122.4194" },
+                { "key": "hourly", "value": "temperature_2m" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "open_meteo_base",
+      "value": "https://api.open-meteo.com"
+    }
+  ]
+}

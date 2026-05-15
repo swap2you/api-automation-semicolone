@@ -1,0 +1,34 @@
+name: Publish Allure report
+
+on:
+  workflow_dispatch:
+
+jobs:
+  allure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Produce fresh Allure raw results (smoke subset)
+        run: npx playwright test --project=open-meteo --project=contracts --project=coinbase --project=sec
+        continue-on-error: true
+
+      - name: Generate static Allure site
+        if: always()
+        run: npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload Allure HTML site
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-site
+          path: allure-report/
+          retention-days: 30

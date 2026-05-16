@@ -1,7 +1,11 @@
+import os from 'node:os';
+
 import { defineConfig } from '@playwright/test';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+const targetEnv = process.env.TARGET_ENV ?? 'local';
 
 export default defineConfig({
   testDir: './tests',
@@ -15,8 +19,21 @@ export default defineConfig({
     ['list'],
     ['html', { open: 'never', outputFolder: 'playwright-report' }],
     ['json', { outputFile: 'test-results.json' }],
-    ['allure-playwright'],
+    [
+      'allure-playwright',
+      {
+        detail: true,
+        suiteTitle: true,
+        environmentInfo: {
+          Framework: 'apiautomation',
+          TARGET_ENV: targetEnv,
+          OS: `${os.platform()} ${os.release()}`,
+          Node: process.version,
+        },
+      },
+    ],
   ],
+  globalSetup: './global-setup.ts',
   globalTeardown: './global-teardown.ts',
   use: {
     trace: process.env.CI ? 'retain-on-failure' : 'off',

@@ -22,6 +22,8 @@ We **do not** claim automatic coverage of “any API from any documentation.”
 
 ## Quick start
 
+**Full step-by-step wizard (env, tests, Allure, Teams):** [`docs/run-project-wizard.md`](docs/run-project-wizard.md)
+
 ```bash
 npm ci
 npx playwright install --with-deps chromium
@@ -79,6 +81,8 @@ See [docs/assumptions-and-risks.md](docs/assumptions-and-risks.md).
 | [Test data](docs/test-data-strategy.md) | Factories and environments |
 | [Roadmap](docs/future-roadmap.md) | Non-goals and next steps |
 | [Copilot bootstrap prompt](docs/github-copilot-bootstrap-prompt.md) | Full recreate-from-scratch spec + fixes checklist |
+| [Shift-left testing](docs/shift-left-testing.md) | Contract/schema regression, env-independent runs |
+| [Notifications setup](docs/notifications-setup.md) | Email vs Teams when pipeline fails |
 
 ## License
 

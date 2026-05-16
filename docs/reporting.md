@@ -25,6 +25,46 @@ npm run report:allure:serve
 
 That watches `./allure-results`, builds the report, and serves it (CLI prints the URL).
 
+### Dashboard “404 Not Found” box
+
+If you see a large **404 / Not Found** tile on the Overview page (often under **Environment** or **Executors**):
+
+- It is **not** an API test failure — it means Allure tried to load **environment/executor widget data** that was missing when the report was generated.
+- **Fix:** [`global-setup.ts`](../global-setup.ts) now writes `allure-results/environment.properties` and `executor.json` before tests run. Regenerate the report after pulling latest code:
+
+```bash
+npm run test:open-meteo
+npm run report:allure
+npm run report:allure:view
+```
+
+- **Module on dashboard:** Each test is labeled `module=open-meteo` (or stripe, etc.). The **Environment** widget shows `Module=open-meteo` when you run a single project (`--project=open-meteo`).
+
+### Export report (HTML / CSV / PDF)
+
+After tests and `npm run report:allure`:
+
+```bash
+npm run report:export -- --format all
+# or one-shot:
+npm run report:allure:full
+npm run report:allure:view
+```
+
+1. Open **`http://localhost:9292`** (not `file://`).
+2. Click **Export report** (top-right) or go to **`/export/index.html`**.
+3. Choose **HTML (ZIP)**, **CSV** (per-test rows from `test-results.json`), or **PDF** (dashboard snapshot) and download.
+
+Files are also written under **`exports/`** (gitignored).
+
+| Format | Contents |
+|--------|----------|
+| HTML (ZIP) | Full static `allure-report/` — unzip and serve over HTTP to browse |
+| CSV | Project, module, file, suite, title, status, duration, error |
+| PDF | Printable overview of the Allure dashboard |
+
+PDF export uses Playwright Chromium. If export fails with “Executable doesn't exist”, run `npm run install:browsers` once, then `npm run report:export` again.
+
 ## GitHub Actions job summary
 
 [`global-teardown.ts`](../global-teardown.ts) parses `test-results.json` and appends a Markdown table to `GITHUB_STEP_SUMMARY` (pass/fail/skip + duration). This satisfies the “concise job summary” requirement without a custom Playwright reporter class.

@@ -1,4 +1,5 @@
 import { test as base } from '@playwright/test';
+import { epic, label, parameter } from 'allure-js-commons';
 
 import { ApiClient } from '../src/core/client/api-client.js';
 import { compileSchema, formatAjvErrors } from '../src/core/contracts/ajv.js';
@@ -26,7 +27,10 @@ export const test = base.extend<{
   moduleName: async ({}, use, testInfo) => {
     const name = testInfo.project.name;
     const mod = projectToModule[name];
-    if (!mod) throw new Error(`Unknown Playwright project: ${name}`);
+    if (!mod) {
+      await use('open-meteo');
+      return;
+    }
     await use(mod);
   },
   moduleConfig: async ({ moduleName }, use) => {
@@ -60,6 +64,15 @@ export const test = base.extend<{
       };
     });
   },
+});
+
+test.beforeEach(async ({}, testInfo) => {
+  const module = projectToModule[testInfo.project.name] ?? testInfo.project.name;
+  await epic(`module:${module}`);
+  await label('module', module);
+  await label('framework', 'apiautomation');
+  await parameter('playwright_project', testInfo.project.name);
+  await parameter('target_env', process.env.TARGET_ENV ?? 'local');
 });
 
 export { expect } from '@playwright/test';

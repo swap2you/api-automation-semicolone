@@ -15,8 +15,22 @@ Public weather API used as the **first onboarding module** (fast, no API key). A
 - Schema validates a **subset**; extra fields are allowed (`additionalProperties` on root where applicable).
 - This module does not model every optional query combination.
 
+## Demo failure scenarios (Allure)
+
+[`tests/modules/open-meteo/negative.realtime-scenarios.spec.ts`](../../tests/modules/open-meteo/negative.realtime-scenarios.spec.ts) contains **intentionally failing** cases tagged `@demo-failure` (service down, auth mimic, routing 404, contract drift). Use for report triage training; exclude in CI with:
+
+```bash
+npx playwright test --project=open-meteo --grep-invert @demo-failure
+```
+
 ## Running
 
 ```bash
-npx playwright test --project=open-meteo
+npm run test:open-meteo
+```
+
+Intentional failure demos for Allure training (expect failures):
+
+```bash
+npm run test:open-meteo:demo
 ```

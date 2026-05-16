@@ -6,7 +6,7 @@ import {
   defaultJsonReportPath,
   parsePlaywrightJsonReport,
 } from './src/core/reporters/github-step-summary.js';
-import { mailConfigFromEnv, sendRunNotification } from './src/core/notifications/email.js';
+import { sendRunNotifications } from './src/core/notifications/notify.js';
 
 async function globalTeardown(): Promise<void> {
   const p = defaultJsonReportPath();
@@ -23,8 +23,21 @@ async function globalTeardown(): Promise<void> {
     runUrl,
   });
   appendGithubStepSummary(md);
+
   try {
-    await sendRunNotification(mailConfigFromEnv(), stats);
+    const result = await sendRunNotifications(stats);
+    if (result.emailSent) {
+      console.log(`Notification: email sent to ${process.env.NOTIFY_TO}`);
+    }
+    if (result.teamsSent) {
+      console.log('Notification: Teams message posted.');
+    }
+    if (result.skippedReason && !result.emailSent && !result.teamsSent) {
+      console.warn(`Notification not sent: ${result.skippedReason}`);
+    }
+    if (result.skippedReason && (result.emailSent || result.teamsSent)) {
+      console.warn(`Notification partial: ${result.skippedReason}`);
+    }
   } catch (e) {
     console.error('Notification error (non-fatal):', e);
   }

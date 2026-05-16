@@ -56,15 +56,22 @@ No SMTP required. Supports:
 ```env
 NOTIFY_CHANNEL=teams
 NOTIFY_ONLY_ON_FAILURE=true
+TEAMS_NOTIFY_ALWAYS=true
 TEAMS_WEBHOOK_KIND=powerautomate
 TEAMS_WEBHOOK_URL=https://....powerplatform.com/.../invoke?api-version=1&...
 ALLURE_REPORT_URL=http://localhost:9292
 ```
 
+| Variable | Effect |
+|----------|--------|
+| `TEAMS_NOTIFY_ALWAYS=true` | Post to Teams after **every** run (pass or fail) with **live** `test-results.json` |
+| `TEAMS_NOTIFY_ALWAYS=false` | Teams only when tests **failed** (same as email) |
+| `NOTIFY_ONLY_ON_FAILURE` | Applies to **email** only when using `NOTIFY_CHANNEL=both` |
+
 ### Test without a failing test run
 
 ```powershell
-npm run notify:teams -- --failure --send
+npm run notify:teams -- --send
 ```
 
 ### Power Automate flow mapping
@@ -85,7 +92,9 @@ Payload includes: **verdict**, **counts**, **failed test list with errors**, **A
 npm run test:ci
 ```
 
-On failure, global teardown posts automatically when `TEAMS_WEBHOOK_URL` is set.
+Global teardown posts automatically when `TEAMS_WEBHOOK_URL` is set and `TEAMS_NOTIFY_ALWAYS=true` (default).
+
+Payload includes the **full test table** (same rows as CSV export), not mock/demo data.
 
 ## Option C — Both
 

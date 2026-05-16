@@ -62,6 +62,7 @@ ALLURE_REPORT_URL=http://localhost:9292
 # --- Notifications: Teams ---
 NOTIFY_CHANNEL=teams
 NOTIFY_ONLY_ON_FAILURE=true
+TEAMS_NOTIFY_ALWAYS=true
 TEAMS_WEBHOOK_KIND=powerautomate
 TEAMS_WEBHOOK_URL=PASTE_YOUR_POWER_AUTOMATE_OR_TEAMS_WEBHOOK_URL_HERE
 ```
@@ -202,12 +203,11 @@ For **Power Automate**, map the flow’s Teams action to dynamic content:
 # Preview payload in console (no send)
 npm run notify:teams -- --failure
 
-# Send FAIL-shaped demo to Teams
-npm run notify:teams -- --failure --send
+# Send live results from last test run (no mock data)
+npm run notify:teams -- --send
 
-# Send PASS-shaped demo (set NOTIFY_ONLY_ON_FAILURE=false first, or use --pass)
-$env:NOTIFY_ONLY_ON_FAILURE="false"
-npm run notify:teams -- --pass --send
+# Mock payload only (Power Automate wiring test)
+npm run notify:teams -- --demo --failure --send
 ```
 
 ### 6.4 Production behavior
@@ -216,9 +216,13 @@ After `npm run test:ci`, **global teardown** posts to Teams when:
 
 - `NOTIFY_CHANNEL=teams` (or `both`)
 - `TEAMS_WEBHOOK_URL` is set
-- `NOTIFY_ONLY_ON_FAILURE=true` **and** at least one test **failed**
+- `TEAMS_NOTIFY_ALWAYS=true` (default) — **every run**, pass or fail
 
-The message includes: verdict, counts, **failed test names + errors**, Allure link, and numbered **next steps**.
+Email still uses `NOTIFY_ONLY_ON_FAILURE` (only on failure).
+
+The Teams message is built from **`test-results.json`** (same data as CSV export / Allure): full per-test table, counts, failures, Allure link.
+
+If you saw `Notification not sent: No failures` — that was the old behavior; set `TEAMS_NOTIFY_ALWAYS=true` in `.env`.
 
 ---
 

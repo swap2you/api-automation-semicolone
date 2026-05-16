@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 
+import type { SummaryStats } from '../reporters/github-step-summary.js';
 import {
   parsePlaywrightJsonReportRows,
+  statsFromRows,
   type TestResultRow,
 } from '../reporters/parse-test-results.js';
-import type { SummaryStats } from '../reporters/github-step-summary.js';
 
 export type RunReportContext = {
   stats: SummaryStats;
@@ -14,6 +15,17 @@ export type RunReportContext = {
   runUrl?: string;
   allureUrl: string;
   reportExportHint: string;
+  runFinishedAt?: string;
+};
+
+export type TestResultLine = {
+  index: number;
+  project: string;
+  module: string;
+  title: string;
+  status: string;
+  durationMs: number;
+  error?: string;
 };
 
 export type RunReportPayload = {
@@ -23,6 +35,8 @@ export type RunReportPayload = {
   plainText: string;
   facts: { name: string; value: string }[];
   failedTests: { project: string; title: string; error: string }[];
+  allTests: TestResultLine[];
+  testResultsTable: string;
   stats: SummaryStats & { total: number };
   links: { label: string; url: string }[];
   nextSteps: string[];
@@ -32,21 +46,33 @@ export function loadRunReportContext(
   stats: SummaryStats,
   jsonReportPath?: string,
 ): RunReportContext {
-  const path = jsonReportPath ?? `${process.cwd()}/test-results.json`;
-  const rows = fs.existsSync(path) ? parsePlaywrightJsonReportRows(path) : [];
+  const reportPath = jsonReportPath ?? `${process.cwd()}/test-results.json`;
+  const rows = fs.existsSync(reportPath) ? parsePlaywrightJsonReportRows(reportPath) : [];
+
+  const alignedStats: SummaryStats =
+    rows.length > 0
+      ? { ...statsFromRows(rows), durationMs: stats.durationMs || statsFromRows(rows).durationMs }
+      : stats;
+
   const runUrl =
     process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
       ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
       : undefined;
 
+  let runFinishedAt: string | undefined;
+  if (fs.existsSync(reportPath)) {
+    runFinishedAt = fs.statSync(reportPath).mtime.toISOString();
+  }
+
   return {
-    stats,
+    stats: alignedStats,
     rows,
     targetEnv: process.env.TARGET_ENV ?? 'local',
     notifyChannel: process.env.NOTIFY_CHANNEL ?? 'teams',
     runUrl,
     allureUrl: process.env.ALLURE_REPORT_URL ?? 'http://localhost:9292',
     reportExportHint: 'npm run report:allure:full && npm run report:allure:view',
+    runFinishedAt,
   };
 }
 
@@ -55,10 +81,44 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
+function statusLabel(status: string): string {
+  if (status === 'passed') return 'PASSED';
+  if (status === 'failed' || status === 'timedOut') return 'FAILED';
+  if (status === 'skipped') return 'SKIPPED';
+  return status.toUpperCase();
+}
+
+function buildTestResultsTable(lines: TestResultLine[], maxRows = 30): string {
+  if (lines.length === 0) {
+    return '(No test rows in test-results.json — run tests first.)';
+  }
+  const shown = lines.slice(0, maxRows);
+  const header = '# | Module | Test | Status | Duration';
+  const sep = '--|---------|------|--------|----------';
+  const body = shown.map(
+    (t) =>
+      `${t.index} | ${t.module} | ${t.title} | ${statusLabel(t.status)} | ${formatDuration(t.durationMs)}`,
+  );
+  const more =
+    lines.length > maxRows ? `\n... +${lines.length - maxRows} more (see Allure or CSV export)` : '';
+  return [header, sep, ...body].join('\n') + more;
+}
+
 export function buildRunReportPayload(ctx: RunReportContext): RunReportPayload {
   const { stats } = ctx;
   const total = stats.passed + stats.failed + stats.skipped;
   const verdict: 'PASS' | 'FAIL' = stats.failed === 0 ? 'PASS' : 'FAIL';
+
+  const allTests: TestResultLine[] = ctx.rows.map((r, i) => ({
+    index: i + 1,
+    project: r.project,
+    module: r.module,
+    title: r.title,
+    status: r.status,
+    durationMs: r.durationMs,
+    error: r.error,
+  }));
+
   const failedRows = ctx.rows.filter((r) => r.status === 'failed' || r.status === 'timedOut');
   const skippedModules = [
     ...new Set(ctx.rows.filter((r) => r.status === 'skipped').map((r) => r.module)),
@@ -69,6 +129,8 @@ export function buildRunReportPayload(ctx: RunReportContext): RunReportPayload {
     title: r.title,
     error: r.error ?? 'See Allure attachment / trace',
   }));
+
+  const testResultsTable = buildTestResultsTable(allTests);
 
   const title =
     verdict === 'PASS'
@@ -100,8 +162,10 @@ export function buildRunReportPayload(ctx: RunReportContext): RunReportPayload {
     { name: 'Total', value: String(total) },
     { name: 'Duration', value: formatDuration(stats.durationMs) },
     { name: 'Environment', value: ctx.targetEnv },
-    { name: 'Channel', value: ctx.notifyChannel },
   ];
+  if (ctx.runFinishedAt) {
+    facts.push({ name: 'Run finished (UTC)', value: ctx.runFinishedAt });
+  }
   if (skippedModules.length && stats.skipped > 0) {
     facts.push({ name: 'Skipped modules', value: skippedModules.join(', ') });
   }
@@ -128,8 +192,9 @@ export function buildRunReportPayload(ctx: RunReportContext): RunReportPayload {
     '='.repeat(Math.min(title.length, 48)),
     '',
     summaryLine,
+    ctx.runFinishedAt ? `Finished (UTC): ${ctx.runFinishedAt}` : '',
     '',
-    '--- Counts ---',
+    '--- Counts (same as Allure / CSV) ---',
     `Passed:  ${stats.passed}`,
     `Failed:  ${stats.failed}`,
     `Skipped: ${stats.skipped}`,
@@ -137,13 +202,16 @@ export function buildRunReportPayload(ctx: RunReportContext): RunReportPayload {
     `Duration: ${formatDuration(stats.durationMs)}`,
     `Environment: ${ctx.targetEnv}`,
     '',
-    '--- Failed tests ---',
+    '--- All test results ---',
+    testResultsTable,
+    '',
+    '--- Failed tests (detail) ---',
     failedBlock,
     '',
     '--- Reports ---',
     `Allure: ${ctx.allureUrl}`,
     ctx.runUrl ? `CI:     ${ctx.runUrl}` : '',
-    `Local:  ${ctx.reportExportHint}`,
+    `Export: ${ctx.reportExportHint}`,
     '',
     '--- Next steps ---',
     ...nextSteps.map((s, i) => `${i + 1}. ${s}`),
@@ -158,6 +226,8 @@ export function buildRunReportPayload(ctx: RunReportContext): RunReportPayload {
     plainText,
     facts,
     failedTests,
+    allTests,
+    testResultsTable,
     stats: { ...stats, total },
     links,
     nextSteps,
@@ -185,6 +255,19 @@ export function buildAdaptiveCard(report: RunReportPayload): Record<string, unkn
       type: 'FactSet',
       facts: report.facts.slice(0, 8).map((f) => ({ title: f.name, value: f.value })),
     },
+    {
+      type: 'TextBlock',
+      text: '**All test results** (matches CSV export)',
+      weight: 'Bolder',
+      spacing: 'Medium',
+    },
+    {
+      type: 'TextBlock',
+      text: report.testResultsTable,
+      fontType: 'Monospace',
+      wrap: true,
+      spacing: 'Small',
+    },
   ];
 
   if (report.failedTests.length > 0) {
@@ -202,18 +285,11 @@ export function buildAdaptiveCard(report: RunReportPayload): Record<string, unkn
         spacing: 'Small',
       });
     }
-    if (report.failedTests.length > 8) {
-      body.push({
-        type: 'TextBlock',
-        text: `_…and ${report.failedTests.length - 8} more (see Allure)._`,
-        isSubtle: true,
-      });
-    }
   }
 
   body.push({
     type: 'TextBlock',
-    text: '**What to do**',
+    text: '**Next steps**',
     weight: 'Bolder',
     spacing: 'Medium',
   });

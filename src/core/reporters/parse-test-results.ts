@@ -81,6 +81,25 @@ export function parsePlaywrightJsonReportRows(filePath: string): TestResultRow[]
   return rows;
 }
 
+export function statsFromRows(rows: TestResultRow[]): {
+  passed: number;
+  failed: number;
+  skipped: number;
+  durationMs: number;
+} {
+  let passed = 0;
+  let failed = 0;
+  let skipped = 0;
+  let durationMs = 0;
+  for (const r of rows) {
+    durationMs += r.durationMs;
+    if (r.status === 'passed') passed += 1;
+    else if (r.status === 'failed' || r.status === 'timedOut') failed += 1;
+    else if (r.status === 'skipped') skipped += 1;
+  }
+  return { passed, failed, skipped, durationMs };
+}
+
 export function rowsToCsv(rows: TestResultRow[]): string {
   const header = ['project', 'module', 'file', 'suite', 'title', 'status', 'duration_ms', 'error'];
   const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;

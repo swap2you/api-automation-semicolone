@@ -8,7 +8,6 @@ import {
 
 export type TeamsConfig = {
   webhookUrl: string;
-  onlyOnFailure: boolean;
   /** powerautomate | teams — auto-detected from URL if omitted */
   webhookKind?: 'powerautomate' | 'teams';
 };
@@ -24,11 +23,7 @@ export function teamsConfigFromEnv(): TeamsConfig {
   } else {
     webhookKind = 'teams';
   }
-  return {
-    webhookUrl: url,
-    onlyOnFailure: process.env.NOTIFY_ONLY_ON_FAILURE !== 'false',
-    webhookKind,
-  };
+  return { webhookUrl: url, webhookKind };
 }
 
 function buildPowerAutomateBody(report: ReturnType<typeof buildRunReportPayload>) {
@@ -40,6 +35,8 @@ function buildPowerAutomateBody(report: ReturnType<typeof buildRunReportPayload>
     message: report.plainText,
     text: report.plainText,
     stats: report.stats,
+    testResults: report.allTests,
+    testResultsTable: report.testResultsTable,
     failedTests: report.failedTests,
     facts: report.facts,
     links: report.links,
@@ -76,6 +73,10 @@ function buildMessageCard(report: ReturnType<typeof buildRunReportPayload>) {
         markdown: true,
       },
       {
+        title: 'All test results',
+        text: `\`\`\`\n${report.testResultsTable}\n\`\`\``,
+      },
+      {
         title: 'Failed tests',
         text: failedMd,
       },
@@ -92,7 +93,7 @@ function buildMessageCard(report: ReturnType<typeof buildRunReportPayload>) {
   };
 }
 
-/** Microsoft Teams / Power Automate webhook notification. */
+/** Microsoft Teams / Power Automate webhook — payload from live test-results.json. */
 export async function sendTeamsRunNotification(
   cfg: TeamsConfig,
   stats: SummaryStats,
@@ -100,7 +101,6 @@ export async function sendTeamsRunNotification(
   contextOverride?: Partial<RunReportContext>,
 ): Promise<void> {
   if (!cfg.webhookUrl) return;
-  if (cfg.onlyOnFailure && stats.failed === 0) return;
 
   const ctx: RunReportContext = {
     ...loadRunReportContext(stats, jsonReportPath),

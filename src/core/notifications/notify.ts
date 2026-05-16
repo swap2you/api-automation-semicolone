@@ -1,6 +1,7 @@
 import type { SummaryStats } from '../reporters/github-step-summary.js';
 import { defaultJsonReportPath } from '../reporters/github-step-summary.js';
 import { mailConfigFromEnv, sendRunNotification } from './email.js';
+import { shouldSendEmail, shouldSendTeams } from './notify-policy.js';
 import { sendTeamsRunNotification, teamsConfigFromEnv } from './teams.js';
 
 export type NotifyChannel = 'email' | 'teams' | 'both' | 'none';
@@ -19,8 +20,8 @@ export type NotifyResult = {
 };
 
 /**
- * Sends post-run notifications when enabled. On failure, notifies if NOTIFY_ONLY_ON_FAILURE
- * is true (default) or always when NOTIFY_ONLY_ON_FAILURE=false.
+ * Sends post-run notifications. Teams uses live test-results.json (see build-run-report.ts).
+ * Email: NOTIFY_ONLY_ON_FAILURE (default). Teams: TEAMS_NOTIFY_ALWAYS (default true).
  */
 export async function sendRunNotifications(
   stats: SummaryStats,
@@ -32,21 +33,25 @@ export async function sendRunNotifications(
     return { channel, emailSent: false, teamsSent: false, skippedReason: 'NOTIFY_CHANNEL=none' };
   }
 
-  const onlyOnFailure = process.env.NOTIFY_ONLY_ON_FAILURE !== 'false';
-  if (onlyOnFailure && stats.failed === 0) {
+  const sendEmail = shouldSendEmail(stats);
+  const sendTeamsFlag = shouldSendTeams(stats);
+
+  if (!sendEmail && !sendTeamsFlag) {
     return {
       channel,
       emailSent: false,
       teamsSent: false,
-      skippedReason: 'No failures — NOTIFY_ONLY_ON_FAILURE is enabled',
+      skippedReason:
+        'No failures — email skipped (NOTIFY_ONLY_ON_FAILURE). Teams skipped (TEAMS_NOTIFY_ALWAYS=false).',
     };
   }
 
   let emailSent = false;
   let teamsSent = false;
   const errors: string[] = [];
+  const notes: string[] = [];
 
-  if (channel === 'email' || channel === 'both') {
+  if ((channel === 'email' || channel === 'both') && sendEmail) {
     const mail = mailConfigFromEnv();
     const mailReady = mail.enabled && mail.host && mail.from && mail.to;
     if (!mailReady) {
@@ -61,30 +66,31 @@ export async function sendRunNotifications(
         errors.push(`Email error: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
+  } else if (channel === 'email' || channel === 'both') {
+    notes.push('Email skipped (NOTIFY_ONLY_ON_FAILURE, no failures).');
   }
 
-  if (channel === 'teams' || channel === 'both') {
+  if ((channel === 'teams' || channel === 'both') && sendTeamsFlag) {
     const teams = teamsConfigFromEnv();
     if (!teams.webhookUrl) {
-      errors.push('Teams skipped: set TEAMS_WEBHOOK_URL (Incoming Webhook URL from channel).');
+      errors.push('Teams skipped: set TEAMS_WEBHOOK_URL in .env');
     } else {
       try {
-        await sendTeamsRunNotification({ ...teams, onlyOnFailure: false }, stats, reportPath);
+        await sendTeamsRunNotification(teams, stats, reportPath);
         teamsSent = true;
       } catch (e) {
         errors.push(`Teams error: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
+  } else if (channel === 'teams' || channel === 'both') {
+    notes.push('Teams skipped (TEAMS_NOTIFY_ALWAYS=false and no failures).');
   }
+
+  const skippedReason = [...notes, ...errors].filter(Boolean).join(' ') || undefined;
 
   if (errors.length && !emailSent && !teamsSent) {
-    return {
-      channel,
-      emailSent,
-      teamsSent,
-      skippedReason: errors.join(' '),
-    };
+    return { channel, emailSent, teamsSent, skippedReason };
   }
 
-  return { channel, emailSent, teamsSent, skippedReason: errors.length ? errors.join(' ') : undefined };
+  return { channel, emailSent, teamsSent, skippedReason };
 }

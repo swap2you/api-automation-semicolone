@@ -1,9 +1,11 @@
 /**
- * Send a sample Teams / Power Automate notification (same payload as global-teardown).
+ * Send Teams notification from the latest real test run (test-results.json).
  *
- *   npm run notify:teams -- --failure --send
- *   npm run notify:teams -- --pass --send
+ *   npm run notify:teams -- --send
+ *   npm run notify:teams -- --demo --failure --send   # mock data only for flow testing
  */
+
+import fs from 'node:fs';
 
 import dotenv from 'dotenv';
 
@@ -14,87 +16,70 @@ import {
   buildRunReportPayload,
   loadRunReportContext,
 } from '../src/core/notifications/build-run-report.js';
-import type { SummaryStats } from '../src/core/reporters/github-step-summary.js';
-import { defaultJsonReportPath } from '../src/core/reporters/github-step-summary.js';
+import {
+  defaultJsonReportPath,
+  parsePlaywrightJsonReport,
+} from '../src/core/reporters/github-step-summary.js';
+import { shouldSendTeams } from '../src/core/notifications/notify-policy.js';
 
 function parseArgs(argv: string[]) {
+  const demo = argv.includes('--demo');
   const failure = argv.includes('--failure') || argv.includes('-f');
-  const pass = argv.includes('--pass');
   const send = argv.includes('--send');
-  return { failure: failure || !pass, send };
-}
-
-function failureDemoStats(): SummaryStats {
-  return { passed: 8, failed: 2, skipped: 9, durationMs: 10_500 };
-}
-
-function passDemoStats(): SummaryStats {
-  return { passed: 17, failed: 0, skipped: 0, durationMs: 6200 };
-}
-
-function demoFailedRows() {
-  return [
-    {
-      project: 'open-meteo',
-      module: 'open-meteo',
-      file: 'modules/open-meteo/contract.forecast.spec.ts',
-      suite: 'Open-Meteo forecast @contract',
-      title: 'response matches contract schema for default city',
-      status: 'failed',
-      durationMs: 890,
-      error: 'Ajv schema mismatch: required property "hourly" missing',
-    },
-    {
-      project: 'stripe',
-      module: 'stripe',
-      file: 'modules/stripe/smoke.customers.spec.ts',
-      suite: 'Stripe customers @smoke',
-      title: 'create customer (form) and retrieve',
-      status: 'failed',
-      durationMs: 420,
-      error: 'Expected 200, received 401 — check STRIPE_SECRET_KEY',
-    },
-  ];
+  return { demo, failure, send };
 }
 
 async function main() {
-  const { failure, send } = parseArgs(process.argv.slice(2));
-  const stats = failure ? failureDemoStats() : passDemoStats();
+  const { demo, failure, send } = parseArgs(process.argv.slice(2));
   const cfg = teamsConfigFromEnv();
-
-  let ctx = loadRunReportContext(stats, defaultJsonReportPath());
-  if (failure && !ctx.rows.some((r) => r.status === 'failed' || r.status === 'timedOut')) {
-    ctx = { ...ctx, rows: [...ctx.rows, ...demoFailedRows()] };
-  }
-  const preview = buildRunReportPayload(ctx);
-
-  console.log('\n--- Teams notification preview ---\n');
-  console.log(preview.plainText);
-  console.log('\n--- Webhook ---');
-  console.log(`URL set: ${cfg.webhookUrl ? 'yes' : 'NO — set TEAMS_WEBHOOK_URL in .env'}`);
-  console.log(`Kind: ${cfg.webhookKind ?? 'auto'}`);
-  console.log(`Only on failure: ${cfg.onlyOnFailure}`);
+  const reportPath = defaultJsonReportPath();
 
   if (!cfg.webhookUrl) {
-    console.error('\nError: TEAMS_WEBHOOK_URL is empty. Copy .env.example → .env and paste your workflow URL.');
+    console.error('TEAMS_WEBHOOK_URL is empty. Set it in .env');
     process.exit(1);
   }
 
+  if (demo) {
+    console.warn('Using --demo mock stats (not real run data). Omit --demo for live results.');
+    const stats = failure
+      ? { passed: 0, failed: 1, skipped: 0, durationMs: 1000 }
+      : { passed: 1, failed: 0, skipped: 0, durationMs: 500 };
+    const ctx = loadRunReportContext(stats, reportPath);
+    const preview = buildRunReportPayload(ctx);
+    console.log(preview.plainText);
+    if (send) {
+      await sendTeamsRunNotification(cfg, stats, reportPath);
+      console.log('Demo Teams notification sent.');
+    }
+    return;
+  }
+
+  if (!fs.existsSync(reportPath)) {
+    console.error(`No ${reportPath} — run: npm run test:ci`);
+    process.exit(1);
+  }
+
+  const stats = parsePlaywrightJsonReport(reportPath);
+  const ctx = loadRunReportContext(stats, reportPath);
+  const preview = buildRunReportPayload(ctx);
+
+  console.log('\n--- Live Teams preview (from test-results.json) ---\n');
+  console.log(preview.plainText);
+
   if (!send) {
-    console.log('\nDry-run only. Add --send to post to Teams:');
-    console.log('  npm run notify:teams -- --failure --send');
+    console.log('\nDry-run. Send to channel: npm run notify:teams -- --send');
     process.exit(0);
   }
 
-  if (cfg.onlyOnFailure && stats.failed === 0) {
-    console.log('\nSkipped: NOTIFY_ONLY_ON_FAILURE=true and stats are PASS. Use --failure or set NOTIFY_ONLY_ON_FAILURE=false');
+  if (!shouldSendTeams(stats)) {
+    console.log(
+      '\nSkipped: TEAMS_NOTIFY_ALWAYS=false and run had no failures. Set TEAMS_NOTIFY_ALWAYS=true in .env',
+    );
     process.exit(0);
   }
 
-  await sendTeamsRunNotification({ ...cfg, onlyOnFailure: false }, stats, undefined, {
-    rows: ctx.rows,
-  });
-  console.log('\nTeams notification sent. Check your channel.');
+  await sendTeamsRunNotification(cfg, stats, reportPath);
+  console.log('\nTeams notification sent with live run data.');
 }
 
 main().catch((e) => {

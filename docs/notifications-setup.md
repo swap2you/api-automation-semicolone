@@ -20,8 +20,8 @@ The teardown logs: `Notification not sent: ...` with the reason.
 ```env
 NOTIFY_CHANNEL=email
 NOTIFY_ENABLED=true
-NOTIFY_TO=swapnil_patil10@persistent.com
-NOTIFY_FROM=<approved-sender@persistent.com>
+NOTIFY_TO=notify-recipient@example.com
+NOTIFY_FROM=notify-sender@example.com
 SMTP_HOST=<your-org-smtp-host>
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -39,7 +39,7 @@ npm run test:open-meteo
 4. Preview without sending:
 
 ```powershell
-npm run notify:test -- --failure --to swapnil_patil10@persistent.com
+npm run notify:test -- --failure --to notify-recipient@example.com
 ```
 
 ## Option B — Microsoft Teams (recommended if SMTP is blocked)

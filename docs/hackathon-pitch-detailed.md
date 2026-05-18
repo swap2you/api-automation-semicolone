@@ -291,7 +291,7 @@ We give Persistent and clients a **repeatable API automation accelerator**—**2
 ### Final ask
 **Pilot** with one squad: onboard their OpenAPI + 10 smoke tests in 1 week.
 
-**Presenter:** Swapnil Patil | IARS | swapnil_patil10@persistent.com
+**Presenter:** Team Dhurandhar | your.name@example.com
 
 ### Checklist
 - [x] One story  

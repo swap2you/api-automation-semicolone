@@ -11,7 +11,7 @@ Use this section at the **top of every Gamma prompt** (or set manually in Gamma 
 | Event | **Semicolons 2026** |
 | Dates | **16–17 May 2026** |
 | Team | **Team Dhurandhar** |
-| Presenter | Swapnil Patil \| IARS \| swapnil_patil10@persistent.com |
+| Presenter | Team Dhurandhar \| your.name@example.com |
 | Company | **Persistent Systems** (use Persistent logo where Gamma allows) |
 
 ---

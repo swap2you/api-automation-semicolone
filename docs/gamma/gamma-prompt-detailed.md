@@ -296,7 +296,7 @@ Phase 5 Enterprise Traceability — central config audit export secret scanning
 
 RIGHT white card Final checklist: one story; architecture simplified; benefits tied to outcomes; demo rehearsed; closing memorized
 
-Bottom presenter: Swapnil Patil | IARS | swapnil_patil10@persistent.com
+Bottom presenter: Team Dhurandhar | your.name@example.com
 
 Footer: Semicolons 2026 | Team Dhurandhar
 Slide 11

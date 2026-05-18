@@ -183,7 +183,7 @@ Fintech teams lose weeks to fragmented API checks—we delivered a **Playwright-
 **Optional ask:** Pilot on one client microservice squad—onboard their OpenAPI/Postman in a week using our module template.
 
 **Presenter line:**  
-Swapnil Patil | IARS | swapnil_patil10@persistent.com | Team Dhurandhar
+Team Dhurandhar | your.name@example.com
 
 ### Final checklist (right box)
 

@@ -203,7 +203,7 @@ Large white bold center-left:
 
 Smaller white text: Optional ask — Pilot with one client microservice squad to onboard their OpenAPI in one week.
 
-Presenter line: Swapnil Patil | IARS | swapnil_patil10@persistent.com
+Presenter line: Team Dhurandhar | your.name@example.com
 
 RIGHT SIDE white card "Final checklist before presenting":
 ☑ One story not many

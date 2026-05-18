@@ -83,6 +83,9 @@ See [docs/assumptions-and-risks.md](docs/assumptions-and-risks.md).
 | [Copilot bootstrap prompt](docs/github-copilot-bootstrap-prompt.md) | Full recreate-from-scratch spec + fixes checklist |
 | [Shift-left testing](docs/shift-left-testing.md) | Contract/schema regression, env-independent runs |
 | [Notifications setup](docs/notifications-setup.md) | Email vs Teams when pipeline fails |
+| [Hackathon pitch (10 min)](docs/hackathon-pitch-10min-standard.md) | Semicolons standard template — slide copy |
+| [Hackathon pitch (detailed)](docs/hackathon-pitch-detailed.md) | Semicolons detailed deck — slide copy |
+| [Gamma prompts](docs/gamma/README.md) | Paste-into-Gamma.app prompts + brand kit |
 
 ## License
 

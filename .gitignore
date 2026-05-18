@@ -10,6 +10,7 @@ playwright/.cache/
 allure-results/
 allure-report/
 exports/
+docs/pitch-assets/
 .DS_Store
 dist/
 coverage/

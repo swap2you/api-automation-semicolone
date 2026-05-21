@@ -1,0 +1,48 @@
+flowchart LR
+  A[Developer / CI Pipeline] --> B[npm run test:ci]
+  B --> C[Playwright Test Runner]
+
+  subgraph M[API Module Layer]
+    M1[Weather API module]
+    M2[Future Finance API module]
+    M3[Future Exchange API module]
+  end
+
+  subgraph CFG[Config Layer]
+    C1[environment config]
+    C2[endpoint config]
+    C3[test data config]
+  end
+
+  subgraph U[Utility Layer]
+    U1[request builder]
+    U2[response validator]
+    U3[schema validator]
+    U4[test data helper]
+    U5[logger]
+  end
+
+  subgraph R[Execution Results]
+    R1[JSON report]
+    R2[Allure report]
+    R3[dashboard]
+  end
+
+  subgraph N[Notification Layer]
+    N1[Teams webhook notification]
+  end
+
+  subgraph O[Output]
+    O1[pass/fail summary]
+    O2[failed test details]
+    O3[duration]
+    O4[report link]
+  end
+
+  C --> M
+  M --> U
+  CFG --> U
+  U --> R
+  R --> N
+  R --> O
+  N --> O
